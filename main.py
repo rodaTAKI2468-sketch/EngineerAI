@@ -167,7 +167,7 @@ results = calculate_reactions(
     moments
 )
 
-x = np.linspace(0, beam_length, 1000)
+x = np.linspace(0, beam_length, 10000)
 
 if beam_type == "S":
 
@@ -215,6 +215,32 @@ y = calculate_deflection(
     E,
     I
 )
+
+max_shear = np.max(np.abs(V))
+max_shear_pos = x[np.argmax(np.abs(V))]
+
+max_moment = np.max(np.abs(M))
+max_moment_pos = x[np.argmax(np.abs(M))]
+
+max_deflection = np.max(np.abs(y))
+max_deflection_pos = x[np.argmax(np.abs(y))]
+
+print("\n=== Maximum Values ===")
+
+print(
+    f"Maximum shear = {max_shear:.2f} kN "
+    f"at x = {max_shear_pos:.2f} m"
+)
+
+print(
+    f"Maximum moment = {max_moment:.2f} kN·m "
+    f"at x = {max_moment_pos:.2f} m"
+)
+
+print(
+    f"Maximum deflection = {max_deflection * 1000:.3f} mm "
+    f"at x = {max_deflection_pos:.2f} m"
+) 
 
 plot_results(
     beam_length,

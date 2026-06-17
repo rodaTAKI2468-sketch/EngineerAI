@@ -73,7 +73,9 @@ def plot_results(
     axes[1].grid(True)
     axes[1].set_xlim(0, beam_length)
 
-    axes[1].set_title("Shear Force Diagram")
+    axes[1].set_title(
+    f"Shear Force Diagram (Max |V| = {np.max(np.abs(V)):.2f} kN)")
+    
     axes[1].set_ylabel("Shear Force (kN)")
 
     # BMD
@@ -104,7 +106,8 @@ def plot_results(
     axes[3].set_xlim(0, beam_length)
 
     axes[3].set_title(
-    f"Deflection Diagram (Maximum Deflection = {np.max(np.abs(y * 1000)):.3f} mm)")
+    f"Deflection Diagram "
+    f"(Maximum Deflection = {np.max(np.abs(y * 1000)):.3f} mm)")
 
 
     axes[3].set_xlabel("Distance along beam (m)")
