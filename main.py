@@ -30,6 +30,10 @@ num_loads = int(input("Enter number of point loads: "))
 loads = []
 positions = []
 
+moments = []
+moment_positions = []
+
+
 for i in range(num_loads):
 
   
@@ -37,12 +41,12 @@ for i in range(num_loads):
     print(f"\n--- Load {i + 1} ---")
 
     load_type = input(
-        "Load type (P for point load, UDL for distributed load): "
+        "Load type (P, UDL, or M for applied moment): "
     ).upper()
 
-    while load_type not in ["P", "UDL"]:
+    while load_type not in ["P", "UDL", "M"]:
         load_type = input(
-            "Please enter P or UDL: "
+            "Please enter P, UDL, or M: "
         ).upper()
 
     if load_type == "P":
@@ -71,7 +75,7 @@ for i in range(num_loads):
         loads.append(magnitude)
         positions.append(position)
 
-    else:
+    elif load_type == "UDL":
 
         intensity = float(
             input("UDL intensity (kN/m): ")
@@ -113,13 +117,43 @@ for i in range(num_loads):
 
         loads.append(equivalent_load)
         positions.append(equivalent_position)
+    elif load_type == "M":
+
+        moment = float(
+        input("Moment magnitude (kN·m): ")
+    )
+
+    position = float(
+        input("Moment position from A (m): ")
+    )
+
+    while not validate_position(position, beam_length):
+        position = float(
+            input("Invalid position. Enter again: ")
+        )
+
+    direction = input(
+        "Direction (CW for clockwise, CCW for counterclockwise): "
+    ).upper()
+
+    while direction not in ["CW", "CCW"]:
+        direction = input(
+            "Please enter CW or CCW: "
+        ).upper()
+
+    if direction == "CW":
+        moment = -moment
+
+    moments.append(moment)
+    moment_positions.append(position)
 
 
 
 reaction_A, reaction_B = calculate_reactions(
     beam_length,
     loads,
-    positions
+    positions,
+    moments
 )
 
 x = np.linspace(0, beam_length, 1000)

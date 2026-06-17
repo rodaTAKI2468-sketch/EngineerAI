@@ -1,7 +1,12 @@
 import numpy as np
 
 
-def calculate_reactions(beam_length, loads, positions):
+def calculate_reactions(
+    beam_length,
+    loads,
+    positions,
+    moments=None
+):
 
     total_force = sum(loads)
 
@@ -10,7 +15,12 @@ def calculate_reactions(beam_length, loads, positions):
         for load, position in zip(loads, positions)
     )
 
-    reaction_B = -moment_about_A / beam_length
+    moment_sum = moment_about_A
+
+    if moments:
+        moment_sum += sum(moments)
+
+    reaction_B = -moment_sum / beam_length
     reaction_A = -(total_force + reaction_B)
 
     return reaction_A, reaction_B
