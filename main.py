@@ -32,31 +32,89 @@ positions = []
 
 for i in range(num_loads):
 
+  
+
     print(f"\n--- Load {i + 1} ---")
 
-    magnitude = float(input("Load magnitude (kN): "))
-
-    position = float(input("Distance from A (m): "))
-
-    while not validate_position(position, beam_length):
-        position = float(
-            input("Invalid position. Enter again: ")
-        )
-
-    direction = input(
-        "Direction (U for up, D for down): "
+    load_type = input(
+        "Load type (P for point load, UDL for distributed load): "
     ).upper()
 
-    while not validate_direction(direction):
-        direction = input(
-            "Please enter U or D: "
+    while load_type not in ["P", "UDL"]:
+        load_type = input(
+            "Please enter P or UDL: "
         ).upper()
 
-    if direction == "D":
-        magnitude = -magnitude
+    if load_type == "P":
 
-    loads.append(magnitude)
-    positions.append(position)
+        magnitude = float(input("Load magnitude (kN): "))
+
+        position = float(input("Distance from A (m): "))
+
+        while not validate_position(position, beam_length):
+            position = float(
+                input("Invalid position. Enter again: ")
+            )
+
+        direction = input(
+            "Direction (U for up, D for down): "
+        ).upper()
+
+        while not validate_direction(direction):
+            direction = input(
+                "Please enter U or D: "
+            ).upper()
+
+        if direction == "D":
+            magnitude = -magnitude
+
+        loads.append(magnitude)
+        positions.append(position)
+
+    else:
+
+        intensity = float(
+            input("UDL intensity (kN/m): ")
+        )
+
+        start = float(
+            input("Start position (m): ")
+        )
+
+        end = float(
+            input("End position (m): ")
+        )
+
+        while (
+            start < 0 or
+            end > beam_length or
+            start >= end
+        ):
+            print("Invalid UDL positions.")
+
+            start = float(input("Start position (m): "))
+            end = float(input("End position (m): "))
+
+        direction = input(
+            "Direction (U for up, D for down): "
+        ).upper()
+
+        while not validate_direction(direction):
+            direction = input(
+                "Please enter U or D: "
+            ).upper()
+
+        equivalent_load = intensity * (end - start)
+
+        equivalent_position = start + (end - start) / 2
+
+        if direction == "D":
+            equivalent_load = -equivalent_load
+
+        loads.append(equivalent_load)
+        positions.append(equivalent_position)
+
+
 
 reaction_A, reaction_B = calculate_reactions(
     beam_length,
