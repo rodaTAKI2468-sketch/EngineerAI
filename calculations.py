@@ -1,5 +1,29 @@
 import numpy as np
 
+def calculate_deflection(
+    x,
+    beam_length,
+    load,
+    position,
+    E,
+    I
+):
+
+    y = np.zeros_like(x)
+
+    if abs(position - beam_length / 2) < 1e-6:
+
+        delta_max = abs(load) * beam_length**3 / (48 * E * I)
+
+        for i, xi in enumerate(x):
+
+            if xi <= beam_length / 2:
+                y[i] = -(4 * delta_max / beam_length**2) * xi * (beam_length - xi)
+
+            else:
+                y[i] = -(4 * delta_max / beam_length**2) * xi * (beam_length - xi)
+
+    return y
 
 def calculate_reactions(
     beam_type,

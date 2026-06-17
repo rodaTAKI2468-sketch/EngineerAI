@@ -3,7 +3,8 @@ import numpy as np
 from calculations import (
     calculate_reactions,
     calculate_shear_force,
-    calculate_bending_moment
+    calculate_bending_moment,
+    calculate_deflection
 )
 
 from validation import (
@@ -29,6 +30,12 @@ while beam_type not in ["S", "C"]:
 print()
 
 beam_length = float(input("Enter beam length (m): "))
+E = float(input("Enter Young's modulus E (GPa): "))
+I = float(input("Enter second moment of area I (m^4): "))
+
+E *= 1e9
+
+
 
 while not validate_beam_length(beam_length):
     beam_length = float(
@@ -200,6 +207,15 @@ M = calculate_bending_moment(
     fixed_moment
 )
 
+y = calculate_deflection(
+    x,
+    beam_length,
+    loads[0],
+    positions[0],
+    E,
+    I
+)
+
 plot_results(
     beam_length,
     loads,
@@ -208,5 +224,6 @@ plot_results(
     reaction_B,
     x,
     V,
-    M
+    M,
+    y
 )

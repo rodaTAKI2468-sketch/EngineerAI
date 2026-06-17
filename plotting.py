@@ -10,10 +10,11 @@ def plot_results(
     reaction_B,
     x,
     V,
-    M
+    M,
+    y
 ):
 
-    fig, axes = plt.subplots(3, 1, figsize=(12, 12))
+    fig, axes = plt.subplots(4, 1, figsize=(10, 12))
 
     # Beam diagram
     axes[0].plot([0, beam_length], [0, 0], linewidth=6)
@@ -89,8 +90,27 @@ def plot_results(
         f"(Max |M| = {np.max(np.abs(M)):.2f} kN·m)"
     )
 
-    axes[2].set_xlabel("Distance along beam (m)")
+    
     axes[2].set_ylabel("Moment (kN·m)")
+    
+        # Deflection Diagram
+    axes[3].plot(x, y * 1000)
+
+    axes[3].fill_between(x, y * 1000, alpha=0.3)
+
+    axes[3].axhline(0, color="black")
+
+    axes[3].grid(True)
+    axes[3].set_xlim(0, beam_length)
+
+    axes[3].set_title(
+    f"Deflection Diagram (Maximum Deflection = {np.max(np.abs(y * 1000)):.3f} mm)")
+
+
+    axes[3].set_xlabel("Distance along beam (m)")
+    axes[3].set_ylabel("Deflection (mm)")
 
     plt.tight_layout()
+    plt.subplots_adjust(hspace=0.5)
     plt.show()
+    
