@@ -2,11 +2,15 @@ import numpy as np
 
 
 def calculate_reactions(
+    beam_type,
     beam_length,
     loads,
     positions,
     moments=None
 ):
+
+    if moments is None:
+        moments = []
 
     total_force = sum(loads)
 
@@ -15,19 +19,28 @@ def calculate_reactions(
         for load, position in zip(loads, positions)
     )
 
-    moment_sum = moment_about_A
+    applied_moments = sum(moments)
 
-    if moments:
-        moment_sum += sum(moments)
+    if beam_type == "S":
 
-    reaction_B = -moment_sum / beam_length
-    reaction_A = -(total_force + reaction_B)
+        reaction_B = -(moment_about_A + applied_moments) / beam_length
 
-    return reaction_A, reaction_B
+        reaction_A = -(total_force + reaction_B)
+
+        return reaction_A, reaction_B
+
+    elif beam_type == "C":
+
+        reaction_A = -total_force
+
+        fixed_moment = -(moment_about_A + applied_moments)
+
+        return reaction_A, fixed_moment
 
 
 def calculate_shear_force(
     x,
+    beam_type,
     reaction_A,
     reaction_B,
     loads,
@@ -40,23 +53,26 @@ def calculate_shear_force(
     for load, position in zip(loads, positions):
         V[x >= position] += load
 
-    V[x >= beam_length] += reaction_B
+    if beam_type == "S":
+        V[x >= beam_length] += reaction_B
 
     return V
 
 
 def calculate_bending_moment(
     x,
+    beam_type,
     reaction_A,
     loads,
-    positions
+    positions,
+    fixed_moment=0
 ):
 
     M = np.zeros_like(x)
 
     for i, xi in enumerate(x):
 
-        moment = reaction_A * xi
+        moment = fixed_moment + reaction_A * xi
 
         for load, position in zip(loads, positions):
 

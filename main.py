@@ -15,8 +15,18 @@ from validation import (
 from plotting import plot_results
 
 
-print("=== EngineerAI v1 ===")
-print("Simply Supported Beam Analysis\n")
+print("=== EngineerAI ===\n")
+
+beam_type = input(
+    "Beam type (S for Simply Supported, C for Cantilever): "
+).upper()
+
+while beam_type not in ["S", "C"]:
+    beam_type = input(
+        "Please enter S or C: "
+    ).upper()
+
+print()
 
 beam_length = float(input("Enter beam length (m): "))
 
@@ -25,7 +35,7 @@ while not validate_beam_length(beam_length):
         input("Beam length must be greater than 0: ")
     )
 
-num_loads = int(input("Enter number of point loads: "))
+num_loads = int(input("Enter number of loads: "))
 
 loads = []
 positions = []
@@ -33,10 +43,7 @@ positions = []
 moments = []
 moment_positions = []
 
-
 for i in range(num_loads):
-
-  
 
     print(f"\n--- Load {i + 1} ---")
 
@@ -89,11 +96,8 @@ for i in range(num_loads):
             input("End position (m): ")
         )
 
-        while (
-            start < 0 or
-            end > beam_length or
-            start >= end
-        ):
+        while start < 0 or end > beam_length or start >= end:
+
             print("Invalid UDL positions.")
 
             start = float(input("Start position (m): "))
@@ -109,7 +113,6 @@ for i in range(num_loads):
             ).upper()
 
         equivalent_load = intensity * (end - start)
-
         equivalent_position = start + (end - start) / 2
 
         if direction == "D":
@@ -117,39 +120,40 @@ for i in range(num_loads):
 
         loads.append(equivalent_load)
         positions.append(equivalent_position)
+
     elif load_type == "M":
 
         moment = float(
-        input("Moment magnitude (kN·m): ")
-    )
-
-    position = float(
-        input("Moment position from A (m): ")
-    )
-
-    while not validate_position(position, beam_length):
-        position = float(
-            input("Invalid position. Enter again: ")
+            input("Moment magnitude (kN·m): ")
         )
 
-    direction = input(
-        "Direction (CW for clockwise, CCW for counterclockwise): "
-    ).upper()
+        position = float(
+            input("Moment position from A (m): ")
+        )
 
-    while direction not in ["CW", "CCW"]:
+        while not validate_position(position, beam_length):
+            position = float(
+                input("Invalid position. Enter again: ")
+            )
+
         direction = input(
-            "Please enter CW or CCW: "
+            "Direction (CW for clockwise, CCW for counterclockwise): "
         ).upper()
 
-    if direction == "CW":
-        moment = -moment
+        while direction not in ["CW", "CCW"]:
+            direction = input(
+                "Please enter CW or CCW: "
+            ).upper()
 
-    moments.append(moment)
-    moment_positions.append(position)
+        if direction == "CW":
+            moment = -moment
+
+        moments.append(moment)
+        moment_positions.append(position)
 
 
-
-reaction_A, reaction_B = calculate_reactions(
+results = calculate_reactions(
+    beam_type,
     beam_length,
     loads,
     positions,
@@ -158,8 +162,28 @@ reaction_A, reaction_B = calculate_reactions(
 
 x = np.linspace(0, beam_length, 1000)
 
+if beam_type == "S":
+
+    reaction_A, reaction_B = results
+    fixed_moment = 0
+
+    print("\n=== Final Results ===")
+    print(f"Reaction at A = {reaction_A:.2f} kN")
+    print(f"Reaction at B = {reaction_B:.2f} kN")
+
+else:
+
+    reaction_A, fixed_moment = results
+    reaction_B = 0
+
+    print("\n=== Final Results ===")
+    print(f"Reaction force at support = {reaction_A:.2f} kN")
+    print(f"Fixed-end moment = {fixed_moment:.2f} kN·m")
+
+
 V = calculate_shear_force(
     x,
+    beam_type,
     reaction_A,
     reaction_B,
     loads,
@@ -169,15 +193,12 @@ V = calculate_shear_force(
 
 M = calculate_bending_moment(
     x,
+    beam_type,
     reaction_A,
     loads,
-    positions
+    positions,
+    fixed_moment
 )
-
-print("\n=== Final Results ===")
-
-print(f"Reaction at A = {reaction_A:.2f} kN")
-print(f"Reaction at B = {reaction_B:.2f} kN")
 
 plot_results(
     beam_length,
