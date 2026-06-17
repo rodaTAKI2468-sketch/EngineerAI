@@ -24,15 +24,13 @@ def calculate_reactions(
     if beam_type == "S":
 
         reaction_B = -(moment_about_A + applied_moments) / beam_length
-
         reaction_A = -(total_force + reaction_B)
 
         return reaction_A, reaction_B
 
-    elif beam_type == "C":
+    else:  # Cantilever
 
         reaction_A = -total_force
-
         fixed_moment = -(moment_about_A + applied_moments)
 
         return reaction_A, fixed_moment
@@ -72,12 +70,21 @@ def calculate_bending_moment(
 
     for i, xi in enumerate(x):
 
-        moment = fixed_moment + reaction_A * xi
+        if beam_type == "S":
 
-        for load, position in zip(loads, positions):
+            moment = reaction_A * xi
 
-            if xi >= position:
-                moment += load * (xi - position)
+            for load, position in zip(loads, positions):
+                if xi >= position:
+                    moment += load * (xi - position)
+
+        else:  # Cantilever
+
+            moment = 0
+
+            for load, position in zip(loads, positions):
+                if xi <= position:
+                    moment += -load * (position - xi)
 
         M[i] = moment
 
