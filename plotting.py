@@ -95,6 +95,26 @@ def plot_results(
     
     axes[2].set_ylabel("Moment (kN·m)")
     
+       
+
+    st.pyplot(fig)
+
+    buffer = io.BytesIO()
+
+    fig.savefig(
+        buffer,
+        format="png",
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    st.download_button(
+        label="Download Beam Report (PNG)",
+        data=buffer.getvalue(),
+        file_name="beam_analysis.png",
+        mime="image/png"
+    )
+    
         # Deflection Diagram
     axes[3].plot(x, y * 1000)
 
@@ -115,5 +135,5 @@ def plot_results(
 
     plt.tight_layout()
     plt.subplots_adjust(hspace=0.5)
-    plt.show()
-    
+
+    return fig
