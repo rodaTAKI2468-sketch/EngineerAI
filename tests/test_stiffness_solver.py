@@ -49,15 +49,17 @@ class MultipleSupportStiffnessTests(unittest.TestCase):
         self.assertAlmostEqual(result["force_equilibrium_error_kN"], 0.0, places=5)
         self.assertGreater(reactions[1], 0.0)
 
-    def test_propped_cantilever_benchmark(self):
+    def test_propped_cantilever_full_span_udl_benchmark(self):
         result = self.solve(
             4.0, [{"position": 0.0, "type": "Fixed"}, {"position": 4.0, "type": "Roller"}],
-            points=[{"position": 4.0, "magnitude": -10.0}],
+            udls=[{"start": 0.0, "end": 4.0, "intensity": -10.0}],
         )
         reactions = result["support_reactions"]
-        self.assertAlmostEqual(reactions[1]["vertical_kN"], 3.75, delta=0.03)
-        self.assertAlmostEqual(reactions[0]["vertical_kN"], 6.25, delta=0.03)
-        self.assertAlmostEqual(reactions[0]["moment_kNm"], 5.0, delta=0.04)
+        # For a propped cantilever under full-span UDL:
+        # R_A = 5wL/8, R_B = 3wL/8, M_A = wL^2/8.
+        self.assertAlmostEqual(reactions[0]["vertical_kN"], 25.0, delta=0.04)
+        self.assertAlmostEqual(reactions[1]["vertical_kN"], 15.0, delta=0.04)
+        self.assertAlmostEqual(reactions[0]["moment_kNm"], 20.0, delta=0.05)
 
     def test_duplicate_support_positions_are_rejected(self):
         with self.assertRaises(ValueError):
