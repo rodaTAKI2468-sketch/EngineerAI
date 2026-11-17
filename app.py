@@ -542,7 +542,7 @@ if run_analysis:
             )
 
         st.info(
-            "Deflection is a numerical Euler–Bernoulli estimate. Accuracy "
+            "Deflection values use the positive-downward convention and are a numerical Euler–Bernoulli estimate. Accuracy "
             "depends on the beam assumptions, input units and sampling. "
             "Check results independently before using them for design."
         )
