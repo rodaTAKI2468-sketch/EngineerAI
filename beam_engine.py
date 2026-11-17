@@ -193,12 +193,11 @@ def analyze_beam(
             start = float(load["start"])
             end = float(load["end"])
             intensity = float(load["intensity"])
-            # Downward UDLs are negative, but produce positive sagging BM
-            # on a simply supported beam.
-            moment_diagram -= 0.5 * intensity * (
-                np.maximum(x - start, 0.0) ** 2
-                - np.maximum(x - end, 0.0) ** 2
-            )
+            # Replace the portion of this UDL to the left of each section
+            # with its resultant acting at that portion's centroid.
+            covered_length = np.clip(x - start, 0.0, end - start)
+            centroid_arm = x - start - 0.5 * covered_length
+            moment_diagram += intensity * covered_length * centroid_arm
         for applied in applied_moments:
             moment_diagram -= float(applied["magnitude"]) * (
                 x >= float(applied["position"])
