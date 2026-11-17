@@ -114,7 +114,7 @@ def analyze_support_configuration(
         )
         result = dict(mirrored)
         result["x"] = beam_length - mirrored["x"][::-1]
-        result["shear"] = mirrored["shear"][::-1]
+        result["shear"] = -mirrored["shear"][::-1]
         result["moment"] = mirrored["moment"][::-1]
         result["deflection"] = (
             None if mirrored["deflection"] is None else mirrored["deflection"][::-1]
@@ -127,20 +127,18 @@ def analyze_support_configuration(
         result["max_moment_position_m"] = beam_length - mirrored["max_moment_position_m"]
         if mirrored["max_deflection_position_m"] is not None:
             result["max_deflection_position_m"] = beam_length - mirrored["max_deflection_position_m"]
-        worked = {
-            "support_note": "A is free and B is fixed. Reverse the coordinate direction and analyse from the fixed end B.",
-            "reaction_steps": [
-                "Take moments and vertical forces about the fixed end B.",
-                f"R_B = {mirrored['reaction_a_kN']:.4g} kN (vertical reaction).",
-                f"M_B = {mirrored['fixed_moment_a_kNm']:.4g} kN·m (fixing moment).",
-            ],
-            "point_load_steps": [],
-            "udl_steps": [],
-            "couple_steps": [],
-            "intervals": [],
-            "boundary_note": "At the free end A, shear and bending moment are zero when no end force or couple is applied.",
-            "applied_moment_note": "Applied couples cause a jump in the bending-moment diagram.",
-        }
+        worked = build_worked_solution(
+            "Cantilever", beam_length, mirrored_points, mirrored_udls,
+            mirrored_couples, mirrored,
+        )
+        worked["support_note"] = (
+            "A is free and B is fixed. Use a reversed coordinate measured from "
+            "the fixed end B; the section equations below use that local coordinate."
+        )
+        worked["boundary_note"] = (
+            "At the free end A, shear and bending moment return to zero when "
+            "there is no applied end force or couple."
+        )
         result["support_explanation"] = "A is free and B is fixed. Loads are mirrored mathematically so the existing cantilever solver can analyse from B."
 
     result["support_classification"] = classification
