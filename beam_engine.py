@@ -193,7 +193,9 @@ def analyze_beam(
             start = float(load["start"])
             end = float(load["end"])
             intensity = float(load["intensity"])
-            moment_diagram += 0.5 * intensity * (
+            # Downward UDLs are negative, but produce positive sagging BM
+            # on a simply supported beam.
+            moment_diagram -= 0.5 * intensity * (
                 np.maximum(x - start, 0.0) ** 2
                 - np.maximum(x - end, 0.0) ** 2
             )
@@ -212,7 +214,9 @@ def analyze_beam(
             intensity = float(load["intensity"])
             distance_to_end = np.maximum(end - x, 0.0)
             distance_to_start = np.maximum(start - x, 0.0)
-            moment_diagram -= 0.5 * intensity * (
+            # Cantilever internal moment is negative (hogging) for a
+            # downward UDL, matching the point-load sign convention.
+            moment_diagram += 0.5 * intensity * (
                 distance_to_end**2 - distance_to_start**2
             )
         for applied in applied_moments:
