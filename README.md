@@ -65,6 +65,12 @@ A separate Streamlit page is available under **Support Configuration** in the ap
 The page produces reactions, SFD/BMD and worked equilibrium steps for supported determinate configurations. The free–fixed case is solved by mirroring the beam from its fixed end. This is a transverse beam model: axial/horizontal reactions are not solved, and pin–pin is considered determinate only within that scope. Statically indeterminate cases require a future compatibility/stiffness-method solver using E and I.
 
 
+## Beam cross-section and stress analysis (new)
+
+The **Multiple-Support Beam Solver** accepts either rectangular dimensions (breadth b and depth h) or supplied section properties (A, I and c). It reports maximum elastic bending stress using σ = Mc/I and transverse shear stress. For a rectangle, it uses τmax = 1.5V/A; for a user-defined section it reports average shear V/A because the exact maximum depends on the section shape and shear-area distribution.
+
+For a rectangular section, A = bh, I = bh³/12, c = h/2 and Z = I/c. Breadth is the dimension across the section; depth is measured in the direction of bending and is the dimension cubed in the second-moment formula. In stiffness/indeterminate mode, the calculated or supplied I is also used by the beam stiffness solver. In determinate exam/statics mode, E is not required for reactions, diagrams or elastic stress calculations. The user-defined option requires A, I and c: area alone is not enough to calculate bending stress.
+
 ## Multiple-support and continuous beam solver (new)
 
 The **Multiple-Support Beam Solver** page analyses continuous and statically indeterminate beams using an Euler–Bernoulli beam-element stiffness method.
