@@ -43,6 +43,7 @@ class SupportConfigurationTests(unittest.TestCase):
         self.assertAlmostEqual(result["reaction_b_kN"], 10.0)
         self.assertAlmostEqual(result["fixed_moment_b_kNm"], 40.0)
         self.assertAlmostEqual(float(result["moment"].min()), -40.0, delta=0.1)
+        self.assertAlmostEqual(float(result["shear"].min()), -10.0, delta=0.1)
 
     def test_indeterminate_configuration_is_rejected(self):
         with self.assertRaises(ValueError):
