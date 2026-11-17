@@ -1,6 +1,6 @@
 # EngineerAI
 
-EngineerAI is a Python and Streamlit learning tool for structural beam analysis. It helps students explore support reactions, shear-force diagrams, bending-moment diagrams and elastic deflection.
+EngineerAI is a Python and Streamlit learning tool for structural beam analysis. Its default workflow is exam-style statics: define the beam supports, span and applied loads to calculate reactions, shear-force diagrams and bending-moment diagrams without requiring material or cross-section properties.
 
 ## Current features
 
@@ -11,8 +11,9 @@ EngineerAI is a Python and Streamlit learning tool for structural beam analysis.
 - Multiple applied clockwise or counter-clockwise moments
 - Automatic support-reaction and equilibrium calculations
 - Live beam sketch showing supports and applied loading
-- Shear Force Diagram (SFD), Bending Moment Diagram (BMD) and deflection curve
-- PNG download of the analysis diagrams
+- Shear Force Diagram (SFD) and Bending Moment Diagram (BMD) in statics-only mode
+- Optional elastic deflection when both Young's modulus E and second moment of area I are supplied
+- PNG download of analysis diagrams
 - Input validation and calculation-method notes
 
 ## Run the Streamlit app
@@ -29,9 +30,15 @@ Start the app:
 streamlit run app.py
 ```
 
-## Run the regression tests
+## Run the command-line application
 
-The beam calculation engine has standard-library unittest tests:
+```bash
+python main.py
+```
+
+The command-line application asks whether deflection is required. Answer No for exam-style reactions/SFD/BMD; answer Yes only when E and I are available.
+
+## Run the regression tests
 
 ```bash
 python -m unittest discover -s tests -v
@@ -39,8 +46,8 @@ python -m unittest discover -s tests -v
 
 ## Engineering model and assumptions
 
-The analysis engine uses static equilibrium and Euler–Bernoulli beam theory. Deflection is calculated by numerically integrating the bending-moment distribution with the relevant support boundary conditions. The model assumes a prismatic beam with constant Young's modulus and second moment of area, linear-elastic material behaviour, small deflections and ideal supports.
+Static beam results use equilibrium and beam section analysis. Reactions, SFD and BMD do not require Young's modulus or second moment of area. When optional deflection is enabled, the engine uses Euler–Bernoulli beam theory and numerical integration of the bending-moment distribution with the relevant support boundary conditions.
 
-Use consistent units: beam length and load positions in m, point forces in kN, UDL intensities in kN/m, applied moments in kN·m, Young's modulus in GPa and second moment of area in m⁴.
+The model assumes a prismatic beam, ideal supports, small deflections, linear-elastic behaviour and constant E and I when deflection is calculated. Use consistent units: beam length and load positions in m, point forces in kN, UDL intensities in kN/m, applied moments in kN·m, Young's modulus in GPa and second moment of area in m⁴.
 
 The app is an educational analysis aid, not a substitute for independent engineering verification or applicable design standards.

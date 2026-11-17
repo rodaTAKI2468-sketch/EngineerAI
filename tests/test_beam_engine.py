@@ -100,6 +100,83 @@ class BeamEngineTests(unittest.TestCase):
                 ],
             )
 
+    def test_exam_style_statics_does_not_require_material_or_section_data(self):
+        result = analyze_beam(
+            "Simply supported",
+            6.0,
+            point_loads=[
+                {"magnitude": -10.0, "position": 2.0},
+                {"magnitude": -20.0, "position": 5.0},
+            ],
+        )
+        self.assertAlmostEqual(result["reaction_a_kN"], 10.0, places=8)
+        self.assertAlmostEqual(result["reaction_b_kN"], 20.0, places=8)
+        self.assertIsNone(result["deflection"])
+        self.assertIsNone(result["max_deflection_m"])
+
+    def test_deflection_requires_both_E_and_I_or_neither(self):
+        with self.assertRaises(ValueError):
+            analyze_beam(
+                "Simply supported",
+                4.0,
+                youngs_modulus_gpa=200.0,
+                point_loads=[{"magnitude": -10.0, "position": 2.0}],
+            )
+
+    def test_downward_udl_has_positive_sagging_moment_on_simply_supported_beam(self):
+        result = analyze_beam(
+            "Simply supported",
+            4.0,
+            distributed_loads=[{"intensity": -2.0, "start": 0.0, "end": 4.0}],
+        )
+        self.assertAlmostEqual(float(result["moment"].max()), 4.0, delta=0.01)
+
+    def test_downward_udl_has_negative_hogging_moment_on_cantilever(self):
+        result = analyze_beam(
+            "Cantilever",
+            4.0,
+            distributed_loads=[{"intensity": -2.0, "start": 0.0, "end": 4.0}],
+        )
+        self.assertAlmostEqual(float(result["moment"].min()), -16.0, delta=0.02)
+
+    def test_full_span_udl_deflection_on_simply_supported_beam(self):
+        result = analyze_beam(
+            "Simply supported",
+            4.0,
+            self.e_gpa,
+            self.i_m4,
+            distributed_loads=[{"intensity": -2.0, "start": 0.0, "end": 4.0}],
+        )
+        expected_deflection_m = (
+            5.0 * 2000.0 * 4.0**4
+            / (384.0 * (self.e_gpa * 1e9) * self.i_m4)
+        )
+        self.assertAlmostEqual(
+            result["max_deflection_m"],
+            expected_deflection_m,
+            delta=expected_deflection_m * 0.003,
+        )
+        self.assertGreater(float(result["deflection"].max()), 0.0)
+
+    def test_full_span_udl_deflection_on_cantilever_beam(self):
+        result = analyze_beam(
+            "Cantilever",
+            4.0,
+            self.e_gpa,
+            self.i_m4,
+            distributed_loads=[{"intensity": -2.0, "start": 0.0, "end": 4.0}],
+        )
+        expected_deflection_m = (
+            2000.0 * 4.0**4
+            / (8.0 * (self.e_gpa * 1e9) * self.i_m4)
+        )
+        self.assertAlmostEqual(
+            result["max_deflection_m"],
+            expected_deflection_m,
+            delta=expected_deflection_m * 0.003,
+        )
+        self.assertGreater(float(result["deflection"].max()), 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
