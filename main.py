@@ -55,10 +55,15 @@ def main():
 
     beam_length = ask_number("Beam length, L (m): ", minimum=0.1)
 
-    include_deflection = ask_direction(
-        "Calculate elastic deflection? (Y/N, default N): ",
-        ["Y", "N"],
-    ) == "Y"
+    while True:
+        deflection_choice = input(
+            "Calculate elastic deflection? (Y/N, default N): "
+        ).strip().upper()
+        if deflection_choice in {"", "Y", "N"}:
+            break
+        print("Please enter Y or N.")
+
+    include_deflection = deflection_choice == "Y"
 
     youngs_modulus = None
     second_moment = None
