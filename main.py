@@ -1,255 +1,188 @@
-import numpy as np
+"""EngineerAI command-line beam analysis.
 
-from calculations import (
-    calculate_reactions,
-    calculate_shear_force,
-    calculate_bending_moment,
-    calculate_deflection
-)
+For the interactive Streamlit interface, run: streamlit run app.py
+"""
+import matplotlib.pyplot as plt
 
-from validation import (
-    validate_beam_length,
-    validate_position,
-    validate_direction
-)
-
-from plotting import plot_results
+from beam_engine import analyze_beam
 
 
-print("=== EngineerAI ===\n")
+def ask_number(prompt, minimum=None, maximum=None):
+    while True:
+        try:
+            value = float(input(prompt))
+        except ValueError:
+            print("Please enter a valid number.")
+            continue
 
-beam_type = input(
-    "Beam type (S for Simply Supported, C for Cantilever): "
-).upper()
-
-while beam_type not in ["S", "C"]:
-    beam_type = input(
-        "Please enter S or C: "
-    ).upper()
-
-print()
-
-beam_length = float(input("Enter beam length (m): "))
-E = float(input("Enter Young's modulus E (GPa): "))
-I = float(input("Enter second moment of area I (m^4): "))
-
-E *= 1e9
+        if minimum is not None and value < minimum:
+            print(f"Value must be at least {minimum}.")
+            continue
+        if maximum is not None and value > maximum:
+            print(f"Value must not exceed {maximum}.")
+            continue
+        return value
 
 
+def ask_count(prompt, maximum=20):
+    while True:
+        try:
+            value = int(input(prompt))
+        except ValueError:
+            print("Please enter a whole number.")
+            continue
+        if 0 <= value <= maximum:
+            return value
+        print(f"Enter a number between 0 and {maximum}.")
 
-while not validate_beam_length(beam_length):
-    beam_length = float(
-        input("Beam length must be greater than 0: ")
+
+def ask_direction(prompt, choices):
+    choices_upper = [choice.upper() for choice in choices]
+    while True:
+        value = input(prompt).strip().upper()
+        if value in choices_upper:
+            return value
+        print("Choose one of: " + ", ".join(choices_upper))
+
+
+def main():
+    print("\\n=== EngineerAI | Beam Analysis ===\\n")
+    support = ask_direction(
+        "Beam type (S = simply supported, C = cantilever): ",
+        ["S", "C"],
     )
+    beam_type = "Simply supported" if support == "S" else "Cantilever"
 
-num_loads = int(input("Enter number of loads: "))
+    beam_length = ask_number("Beam length, L (m): ", minimum=0.1)
+    youngs_modulus = ask_number("Young's modulus, E (GPa): ", minimum=0.1)
+    second_moment = ask_number("Second moment of area, I (m^4): ", minimum=1e-12)
 
-loads = []
-positions = []
-
-moments = []
-moment_positions = []
-
-for i in range(num_loads):
-
-    print(f"\n--- Load {i + 1} ---")
-
-    load_type = input(
-        "Load type (P, UDL, or M for applied moment): "
-    ).upper()
-
-    while load_type not in ["P", "UDL", "M"]:
-        load_type = input(
-            "Please enter P, UDL, or M: "
-        ).upper()
-
-    if load_type == "P":
-
-        magnitude = float(input("Load magnitude (kN): "))
-
-        position = float(input("Distance from A (m): "))
-
-        while not validate_position(position, beam_length):
-            position = float(
-                input("Invalid position. Enter again: ")
-            )
-
-        direction = input(
-            "Direction (U for up, D for down): "
-        ).upper()
-
-        while not validate_direction(direction):
-            direction = input(
-                "Please enter U or D: "
-            ).upper()
-
+    point_loads = []
+    print("\\n--- Point loads ---")
+    for index in range(ask_count("Number of point loads: ", maximum=20)):
+        print(f"Point load P{index + 1}")
+        magnitude = ask_number("  Magnitude (kN): ", minimum=0.0)
+        position = ask_number(
+            f"  Position from A (0 to {beam_length:g} m): ",
+            minimum=0.0,
+            maximum=beam_length,
+        )
+        direction = ask_direction("  Direction (U = up, D = down): ", ["U", "D"])
         if direction == "D":
             magnitude = -magnitude
+        point_loads.append({"magnitude": magnitude, "position": position})
 
-        loads.append(magnitude)
-        positions.append(position)
-
-    elif load_type == "UDL":
-
-        intensity = float(
-            input("UDL intensity (kN/m): ")
+    distributed_loads = []
+    print("\\n--- Uniformly distributed loads (UDLs) ---")
+    for index in range(ask_count("Number of UDL segments: ", maximum=12)):
+        print(f"UDL {index + 1}")
+        intensity = ask_number("  Intensity (kN/m): ", minimum=0.0)
+        start = ask_number(
+            f"  Start position (0 to {beam_length:g} m): ",
+            minimum=0.0,
+            maximum=beam_length,
         )
-
-        start = float(
-            input("Start position (m): ")
+        end = ask_number(
+            f"  End position (greater than start and up to {beam_length:g} m): ",
+            minimum=0.0,
+            maximum=beam_length,
         )
-
-        end = float(
-            input("End position (m): ")
-        )
-
-        while start < 0 or end > beam_length or start >= end:
-
-            print("Invalid UDL positions.")
-
-            start = float(input("Start position (m): "))
-            end = float(input("End position (m): "))
-
-        direction = input(
-            "Direction (U for up, D for down): "
-        ).upper()
-
-        while not validate_direction(direction):
-            direction = input(
-                "Please enter U or D: "
-            ).upper()
-
-        equivalent_load = intensity * (end - start)
-        equivalent_position = start + (end - start) / 2
-
-        if direction == "D":
-            equivalent_load = -equivalent_load
-
-        loads.append(equivalent_load)
-        positions.append(equivalent_position)
-
-    elif load_type == "M":
-
-        moment = float(
-            input("Moment magnitude (kN·m): ")
-        )
-
-        position = float(
-            input("Moment position from A (m): ")
-        )
-
-        while not validate_position(position, beam_length):
-            position = float(
-                input("Invalid position. Enter again: ")
+        while end <= start:
+            print("  End position must be greater than start position.")
+            end = ask_number(
+                f"  End position (greater than {start:g} m): ",
+                minimum=0.0,
+                maximum=beam_length,
             )
+        direction = ask_direction("  Direction (U = up, D = down): ", ["U", "D"])
+        if direction == "D":
+            intensity = -intensity
+        distributed_loads.append(
+            {"intensity": intensity, "start": start, "end": end}
+        )
 
-        direction = input(
-            "Direction (CW for clockwise, CCW for counterclockwise): "
-        ).upper()
-
-        while direction not in ["CW", "CCW"]:
-            direction = input(
-                "Please enter CW or CCW: "
-            ).upper()
-
+    applied_moments = []
+    print("\\n--- Applied moments ---")
+    for index in range(ask_count("Number of applied moments: ", maximum=12)):
+        print(f"Applied moment M{index + 1}")
+        magnitude = ask_number("  Magnitude (kN.m): ", minimum=0.0)
+        position = ask_number(
+            f"  Position from A (0 to {beam_length:g} m): ",
+            minimum=0.0,
+            maximum=beam_length,
+        )
+        direction = ask_direction(
+            "  Rotation (CCW or CW): ",
+            ["CCW", "CW"],
+        )
         if direction == "CW":
-            moment = -moment
+            magnitude = -magnitude
+        applied_moments.append({"magnitude": magnitude, "position": position})
 
-        moments.append(moment)
-        moment_positions.append(position)
+    results = analyze_beam(
+        beam_type=beam_type,
+        beam_length=beam_length,
+        youngs_modulus_gpa=youngs_modulus,
+        second_moment_m4=second_moment,
+        point_loads=point_loads,
+        distributed_loads=distributed_loads,
+        applied_moments=applied_moments,
+    )
+
+    print("\\n=== Support reactions ===")
+    print(f"Reaction at A: {results['reaction_a_kN']:.3f} kN")
+    if beam_type == "Simply supported":
+        print(f"Reaction at B: {results['reaction_b_kN']:.3f} kN")
+    else:
+        print(f"Fixed-end moment at A: {results['fixed_moment_a_kNm']:.3f} kN.m")
+
+    print("\\n=== Maximum values ===")
+    print(
+        f"Maximum absolute shear: {results['max_shear_kN']:.3f} kN "
+        f"at x = {results['max_shear_position_m']:.3f} m"
+    )
+    print(
+        f"Maximum absolute moment: {results['max_moment_kNm']:.3f} kN.m "
+        f"at x = {results['max_moment_position_m']:.3f} m"
+    )
+    print(
+        f"Maximum absolute deflection: {results['max_deflection_m'] * 1000:.4f} mm "
+        f"at x = {results['max_deflection_position_m']:.3f} m"
+    )
+
+    print("\\n=== Equilibrium residuals (should be close to zero) ===")
+    print(f"Sum of vertical forces: {results['force_equilibrium_error_kN']:.3e} kN")
+    print(f"Moment about A: {results['moment_equilibrium_error_kNm']:.3e} kN.m")
+
+    x = results["x"]
+    figure, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True)
+
+    axes[0].step(x, results["shear"], where="post")
+    axes[0].axhline(0, color="black", linewidth=0.8)
+    axes[0].fill_between(x, results["shear"], 0, step="post", alpha=0.2)
+    axes[0].set_ylabel("Shear (kN)")
+    axes[0].set_title("Shear Force Diagram")
+    axes[0].grid(True, alpha=0.3)
+
+    axes[1].plot(x, results["moment"])
+    axes[1].axhline(0, color="black", linewidth=0.8)
+    axes[1].fill_between(x, results["moment"], 0, alpha=0.2)
+    axes[1].set_ylabel("Moment (kN.m)")
+    axes[1].set_title("Bending Moment Diagram")
+    axes[1].grid(True, alpha=0.3)
+
+    deflection_mm = results["deflection"] * 1000.0
+    axes[2].plot(x, deflection_mm)
+    axes[2].axhline(0, color="black", linewidth=0.8)
+    axes[2].fill_between(x, deflection_mm, 0, alpha=0.2)
+    axes[2].set_ylabel("Deflection (mm)")
+    axes[2].set_xlabel("Distance from A (m)")
+    axes[2].set_title("Elastic Deflection")
+    axes[2].grid(True, alpha=0.3)
+
+    figure.tight_layout()
+    plt.show()
 
 
-results = calculate_reactions(
-    beam_type,
-    beam_length,
-    loads,
-    positions,
-    moments
-)
-
-x = np.linspace(0, beam_length, 10000)
-
-if beam_type == "S":
-
-    reaction_A, reaction_B = results
-    fixed_moment = 0
-
-    print("\n=== Final Results ===")
-    print(f"Reaction at A = {reaction_A:.2f} kN")
-    print(f"Reaction at B = {reaction_B:.2f} kN")
-
-else:
-
-    reaction_A, fixed_moment = results
-    reaction_B = 0
-
-    print("\n=== Final Results ===")
-    print(f"Reaction force at support = {reaction_A:.2f} kN")
-    print(f"Fixed-end moment = {fixed_moment:.2f} kN·m")
-
-
-V = calculate_shear_force(
-    x,
-    beam_type,
-    reaction_A,
-    reaction_B,
-    loads,
-    positions,
-    beam_length
-)
-
-M = calculate_bending_moment(
-    x,
-    beam_type,
-    reaction_A,
-    loads,
-    positions,
-    fixed_moment
-)
-
-y = calculate_deflection(
-    x,
-    beam_length,
-    loads[0],
-    positions[0],
-    E,
-    I
-)
-
-max_shear = np.max(np.abs(V))
-max_shear_pos = x[np.argmax(np.abs(V))]
-
-max_moment = np.max(np.abs(M))
-max_moment_pos = x[np.argmax(np.abs(M))]
-
-max_deflection = np.max(np.abs(y))
-max_deflection_pos = x[np.argmax(np.abs(y))]
-
-print("\n=== Maximum Values ===")
-
-print(
-    f"Maximum shear = {max_shear:.2f} kN "
-    f"at x = {max_shear_pos:.2f} m"
-)
-
-print(
-    f"Maximum moment = {max_moment:.2f} kN·m "
-    f"at x = {max_moment_pos:.2f} m"
-)
-
-print(
-    f"Maximum deflection = {max_deflection * 1000:.3f} mm "
-    f"at x = {max_deflection_pos:.2f} m"
-) 
-
-plot_results(
-    beam_length,
-    loads,
-    positions,
-    reaction_A,
-    reaction_B,
-    x,
-    V,
-    M,
-    y
-)
+if __name__ == "__main__":
+    main()
