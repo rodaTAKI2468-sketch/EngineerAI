@@ -64,15 +64,14 @@ class MultipleSupportStiffnessTests(unittest.TestCase):
             self.solve(4.0, [{"position": 1.0, "type": "Pin"},
                              {"position": 1.0, "type": "Roller"}])
 
-    def test_unstable_structure_is_reported(self):
-        with self.assertRaises(ValueError):
-            self.solve(4.0, [{"position": 0.0, "type": "Pin"},
-                             {"position": 4.0, "type": "Pin"}],
-                       points=[{"position": 2.0, "magnitude": -1.0}]) if False else self.solve(
-                           4.0, [{"position": 0.0, "type": "Pin"},
-                                 {"position": 4.0, "type": "Pin"}],
-                           points=[{"position": 2.0, "magnitude": -1.0}]
-                       )
+    def test_two_roller_supports_are_stable_for_transverse_beam_model(self):
+        result = self.solve(
+            4.0, [{"position": 0.0, "type": "Roller"},
+                  {"position": 4.0, "type": "Roller"}],
+            points=[{"position": 2.0, "magnitude": -10.0}],
+        )
+        self.assertAlmostEqual(result["support_reactions"][0]["vertical_kN"], 5.0, places=5)
+        self.assertAlmostEqual(result["support_reactions"][1]["vertical_kN"], 5.0, places=5)
 
 
 if __name__ == "__main__":
