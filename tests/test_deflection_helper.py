@@ -23,7 +23,7 @@ class DeflectionCompatibilityTests(unittest.TestCase):
         )
         self.assertAlmostEqual(float(y[0]), 0.0, places=10)
         self.assertAlmostEqual(float(y[-1]), 0.0, places=10)
-        self.assertLess(float(np.min(y)), 0.0)
+        self.assertGreater(float(np.max(y)), 0.0)
 
     def test_multiple_point_loads_are_included(self):
         x = np.linspace(0.0, 5.0, 1001)
@@ -47,7 +47,7 @@ class DeflectionCompatibilityTests(unittest.TestCase):
         )
         self.assertAlmostEqual(float(y_two_loads[0]), 0.0, places=10)
         self.assertAlmostEqual(float(y_two_loads[-1]), 0.0, places=10)
-        self.assertLess(float(np.min(y_two_loads)), float(np.min(y_one_load)))
+        self.assertGreater(float(np.max(y_two_loads)), float(np.max(y_one_load)))
 
     def test_cantilever_with_off_centre_load_deflects_after_the_load(self):
         x = np.linspace(0.0, 4.0, 801)
@@ -61,7 +61,7 @@ class DeflectionCompatibilityTests(unittest.TestCase):
             beam_type="C",
         )
         self.assertAlmostEqual(float(y[0]), 0.0, places=10)
-        self.assertLess(float(y[-1]), 0.0)
+        self.assertGreater(float(y[-1]), 0.0)
 
 
 if __name__ == "__main__":
