@@ -1,46 +1,46 @@
 # EngineerAI
 
-EngineerAI is a Python-based structural analysis application for simply supported beams.
+EngineerAI is a Python and Streamlit learning tool for structural beam analysis. It helps students explore support reactions, shear-force diagrams, bending-moment diagrams and elastic deflection.
 
-## Features
+## Current features
 
-* Multiple point loads
-* Upward and downward load directions
-* Automatic support reaction calculations
-* Shear Force Diagram (SFD) generation
-* Bending Moment Diagram (BMD) generation
-* Input validation
+- Simply supported beams (pin at A, roller at B)
+- Cantilever beams (fixed at A, free at the other end)
+- Multiple point loads with upward or downward directions
+- Multiple partial-span or full-span uniformly distributed loads (UDLs)
+- Multiple applied clockwise or counter-clockwise moments
+- Automatic support-reaction and equilibrium calculations
+- Live beam sketch showing supports and applied loading
+- Shear Force Diagram (SFD), Bending Moment Diagram (BMD) and deflection curve
+- PNG download of the analysis diagrams
+- Input validation and calculation-method notes
 
-## Technologies Used
+## Run the Streamlit app
 
-* Python
-* NumPy
-* Matplotlib
-* Git
-* GitHub
-
-## Installation
+Install the dependencies:
 
 ```bash
-pip install numpy matplotlib
+pip install -r requirements.txt
 ```
 
-## Run the application
+Start the app:
 
 ```bash
-python3 main.py
+streamlit run app.py
 ```
 
-## Example Input
+## Run the regression tests
 
-* Beam length: 20 m
-* Load 1: 50 kN downward at 12 m
+The beam calculation engine has standard-library unittest tests:
 
-## Future Features
+```bash
+python -m unittest discover -s tests -v
+```
 
-* Uniformly Distributed Loads (UDLs)
-* Applied moments
-* Cantilever beams
-* Flask web application
-* SolidWorks integration
-* AI-assisted engineering explanations
+## Engineering model and assumptions
+
+The analysis engine uses static equilibrium and Euler–Bernoulli beam theory. Deflection is calculated by numerically integrating the bending-moment distribution with the relevant support boundary conditions. The model assumes a prismatic beam with constant Young's modulus and second moment of area, linear-elastic material behaviour, small deflections and ideal supports.
+
+Use consistent units: beam length and load positions in m, point forces in kN, UDL intensities in kN/m, applied moments in kN·m, Young's modulus in GPa and second moment of area in m⁴.
+
+The app is an educational analysis aid, not a substitute for independent engineering verification or applicable design standards.
