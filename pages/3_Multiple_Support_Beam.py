@@ -25,7 +25,7 @@ with st.sidebar:
         st.caption("No material or section properties are needed. Statics mode is limited to determinate two-support beams.")
     st.divider()
     st.subheader("Supports")
-    support_count = st.number_input("Number of supports", 2, 8, 3, 1)
+    support_count = st.number_input("Number of supports", 2, 8, 2 if analysis_mode == "Exam / statics (no E or I)" else 3, 1, key=f"multi_support_count_{analysis_mode}")
     supports = []
     default_positions = np.linspace(0.0, float(length), int(support_count)).tolist()
     for i in range(int(support_count)):
@@ -34,8 +34,9 @@ with st.sidebar:
             c1, c2 = st.columns(2)
             pos = c1.number_input(f"Position from A (m)", 0.0, float(length),
                                   float(default_positions[i]), 0.25, key=f"multi_support_pos_{i}")
-            kind = c2.selectbox("Type", ["Roller", "Pin", "Fixed"],
-                                index=2 if i == 0 else 0, key=f"multi_support_type_{i}")
+            support_options = ["Roller", "Pin"] if analysis_mode == "Exam / statics (no E or I)" else ["Roller", "Pin", "Fixed"]
+            kind = c2.selectbox("Type", support_options,
+                                index=1 if i == 0 else 0, key=f"multi_support_type_{analysis_mode}_{i}")
             supports.append({"position": float(pos), "type": kind})
     st.divider()
     st.subheader("Loading")
