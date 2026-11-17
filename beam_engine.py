@@ -17,8 +17,8 @@ import numpy as np
 def _validate_inputs(
     beam_type: str,
     beam_length: float,
-    youngs_modulus_gpa: float,
-    second_moment_m4: float,
+    youngs_modulus_gpa: float | None,
+    second_moment_m4: float | None,
     point_loads: list[dict[str, float]],
     distributed_loads: list[dict[str, float]],
     applied_moments: list[dict[str, float]],
@@ -27,9 +27,15 @@ def _validate_inputs(
         raise ValueError("Choose a simply supported beam or a cantilever.")
     if not np.isfinite(beam_length) or beam_length <= 0:
         raise ValueError("Beam length must be greater than zero.")
-    if not np.isfinite(youngs_modulus_gpa) or youngs_modulus_gpa <= 0:
+    if (youngs_modulus_gpa is None) != (second_moment_m4 is None):
+        raise ValueError("Enter both E and I to calculate deflection, or leave both blank for statics only.")
+    if youngs_modulus_gpa is not None and (
+        not np.isfinite(youngs_modulus_gpa) or youngs_modulus_gpa <= 0
+    ):
         raise ValueError("Young's modulus must be greater than zero.")
-    if not np.isfinite(second_moment_m4) or second_moment_m4 <= 0:
+    if second_moment_m4 is not None and (
+        not np.isfinite(second_moment_m4) or second_moment_m4 <= 0
+    ):
         raise ValueError("Second moment of area must be greater than zero.")
 
     tol = 1e-9
@@ -98,8 +104,8 @@ def _cumulative_trapezoid(values: np.ndarray, x: np.ndarray) -> np.ndarray:
 def analyze_beam(
     beam_type: str,
     beam_length: float,
-    youngs_modulus_gpa: float,
-    second_moment_m4: float,
+    youngs_modulus_gpa: float | None = None,
+    second_moment_m4: float | None = None,
     point_loads: list[dict[str, float]] | None = None,
     distributed_loads: list[dict[str, float]] | None = None,
     applied_moments: list[dict[str, float]] | None = None,
@@ -214,23 +220,32 @@ def analyze_beam(
                 x <= float(applied["position"])
             )
 
-    # Euler-Bernoulli beam equation: y'' = -M / (E I).
-    # M is in kN.m, so convert to N.m. Enforce the appropriate boundary
-    # conditions by removing the rigid-body integration constants.
-    e_pa = float(youngs_modulus_gpa) * 1e9
-    curvature = -(moment_diagram * 1000.0) / (e_pa * float(second_moment_m4))
-    slope_raw = _cumulative_trapezoid(curvature, x)
-    deflection_raw = _cumulative_trapezoid(slope_raw, x)
+    # Deflection is optional: static equilibrium, SFD and BMD do not
+    # depend on Young's modulus E or second moment of area I.
+    deflection = None
+    if youngs_modulus_gpa is not None and second_moment_m4 is not None:
+        # Euler-Bernoulli beam equation: y'' = -M / (E I).
+        # M is in kN.m, so convert to N.m and apply support boundary conditions.
+        e_pa = float(youngs_modulus_gpa) * 1e9
+        curvature = -(moment_diagram * 1000.0) / (e_pa * float(second_moment_m4))
+        slope_raw = _cumulative_trapezoid(curvature, x)
+        deflection_raw = _cumulative_trapezoid(slope_raw, x)
 
-    if beam_type == "Simply supported":
-        deflection = deflection_raw - (x / beam_length) * deflection_raw[-1]
+        if beam_type == "Simply supported":
+            deflection = deflection_raw - (x / beam_length) * deflection_raw[-1]
+        else:
+            # Fixed end at A: y(0) = 0 and slope(0) = 0.
+            deflection = deflection_raw
+
+        max_deflection_index = int(np.argmax(np.abs(deflection)))
+        max_deflection_m = float(abs(deflection[max_deflection_index]))
+        max_deflection_position_m = float(x[max_deflection_index])
     else:
-        # Fixed end at A: y(0) = 0 and slope(0) = 0.
-        deflection = deflection_raw
+        max_deflection_m = None
+        max_deflection_position_m = None
 
     max_shear_index = int(np.argmax(np.abs(shear)))
     max_moment_index = int(np.argmax(np.abs(moment_diagram)))
-    max_deflection_index = int(np.argmax(np.abs(deflection)))
 
     # Equilibrium residuals provide a quick numerical verification.
     if beam_type == "Simply supported":
@@ -254,8 +269,8 @@ def analyze_beam(
         "max_shear_position_m": float(x[max_shear_index]),
         "max_moment_kNm": float(abs(moment_diagram[max_moment_index])),
         "max_moment_position_m": float(x[max_moment_index]),
-        "max_deflection_m": float(abs(deflection[max_deflection_index])),
-        "max_deflection_position_m": float(x[max_deflection_index]),
+        "max_deflection_m": max_deflection_m,
+        "max_deflection_position_m": max_deflection_position_m,
         "force_equilibrium_error_kN": float(force_residual),
         "moment_equilibrium_error_kNm": float(moment_residual),
     }
