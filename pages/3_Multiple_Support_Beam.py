@@ -5,6 +5,7 @@ import numpy as np
 import streamlit as st
 
 from stiffness_solver import analyze_multiple_support_beam, build_stiffness_method_steps
+from multiple_support_statics import analyze_determinate_multiple_support_beam
 
 st.set_page_config(page_title="EngineerAI | Multiple Supports", page_icon="🏗️", layout="wide")
 st.title("Multiple-Support Beam Solver")
@@ -13,12 +14,18 @@ st.caption("Continuous beams • Statically indeterminate analysis • Euler–B
 with st.sidebar:
     st.header("Beam and material")
     length = st.number_input("Beam length, L (m)", 1.0, 100.0, 8.0, 0.5)
-    youngs_modulus = st.number_input("Young's modulus, E (GPa)", 0.1, 1000.0, 200.0, 1.0)
-    second_moment = st.number_input("Second moment of area, I (m⁴)", 1e-8, 1000.0, 1e-4, format="%.8f")
-    st.caption("E and I are required because the stiffness method calculates deformation compatibility.")
+    analysis_mode = st.radio("Analysis mode", ["Exam / statics (no E or I)", "Stiffness / deflection (requires E and I)"], index=0)
+    if analysis_mode == "Stiffness / deflection (requires E and I)":
+        youngs_modulus = st.number_input("Young's modulus, E (GPa)", 0.1, 1000.0, 200.0, 1.0)
+        second_moment = st.number_input("Second moment of area, I (m⁴)", 1e-8, 1000.0, 1e-4, format="%.8f")
+        st.caption("E and I are used for deformation compatibility and deflection.")
+    else:
+        youngs_modulus = None
+        second_moment = None
+        st.caption("No material or section properties are needed. Statics mode is limited to determinate two-support beams.")
     st.divider()
     st.subheader("Supports")
-    support_count = st.number_input("Number of supports", 2, 8, 3, 1)
+    support_count = st.number_input("Number of supports", 2, 8, 2 if analysis_mode == "Exam / statics (no E or I)" else 3, 1, key=f"multi_support_count_{analysis_mode}")
     supports = []
     default_positions = np.linspace(0.0, float(length), int(support_count)).tolist()
     for i in range(int(support_count)):
@@ -27,8 +34,9 @@ with st.sidebar:
             c1, c2 = st.columns(2)
             pos = c1.number_input(f"Position from A (m)", 0.0, float(length),
                                   float(default_positions[i]), 0.25, key=f"multi_support_pos_{i}")
-            kind = c2.selectbox("Type", ["Roller", "Pin", "Fixed"],
-                                index=2 if i == 0 else 0, key=f"multi_support_type_{i}")
+            support_options = ["Roller", "Pin"] if analysis_mode == "Exam / statics (no E or I)" else ["Roller", "Pin", "Fixed"]
+            kind = c2.selectbox("Type", support_options,
+                                index=1 if i == 0 else 0, key=f"multi_support_type_{analysis_mode}_{i}")
             supports.append({"position": float(pos), "type": kind})
     st.divider()
     st.subheader("Loading")
@@ -92,14 +100,23 @@ plt.close(fig)
 
 if st.button("Analyse multiple-support beam", type="primary", use_container_width=True):
     try:
-        result = analyze_multiple_support_beam(
-            float(length), float(youngs_modulus), float(second_moment), supports,
-            point_loads, distributed_loads, applied_moments
-        )
+        if analysis_mode == "Exam / statics (no E or I)":
+            result = analyze_determinate_multiple_support_beam(
+                float(length), supports, point_loads, distributed_loads, applied_moments
+            )
+        else:
+            result = analyze_multiple_support_beam(
+                float(length), float(youngs_modulus), float(second_moment), supports,
+                point_loads, distributed_loads, applied_moments
+            )
     except (ValueError, KeyError, TypeError, np.linalg.LinAlgError) as exc:
         st.error(str(exc))
     else:
-        st.success(f"Analysis completed: {result['node_count']} nodes and {result['element_count']} elements.")
+        stiffness_mode = analysis_mode == "Stiffness / deflection (requires E and I)"
+        if stiffness_mode:
+            st.success(f"Stiffness analysis completed: {result['node_count']} nodes and {result['element_count']} elements.")
+        else:
+            st.success("Exam-style statics analysis completed without E or I.")
         st.subheader("Support reactions")
         rows = []
         for reaction in result["support_reactions"]:
@@ -109,13 +126,14 @@ if st.button("Analyse multiple-support beam", type="primary", use_container_widt
                 "Reaction moment (kN·m)": reaction["moment_kNm"],
             })
         st.dataframe(rows, use_container_width=True, hide_index=True)
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
         c1.metric("Maximum |V|", f"{result['max_shear_kN']:.3f} kN")
         c2.metric("Maximum |M|", f"{result['max_moment_kNm']:.3f} kN·m")
-        c3.metric("Maximum deflection", f"{result['max_deflection_mm']:.3f} mm")
-        st.caption(f"Maximum deflection at x = {result['max_deflection_position_m']:.3f} m (downward positive).")
+        if stiffness_mode:
+            st.metric("Maximum deflection", f"{result['max_deflection_mm']:.3f} mm")
+            st.caption(f"Maximum deflection at x = {result['max_deflection_position_m']:.3f} m (downward positive).")
 
-        tabs = st.tabs(["Shear force diagram", "Bending moment diagram", "Deflection"])
+        tabs = st.tabs(["Shear force diagram", "Bending moment diagram"] + (["Deflection"] if stiffness_mode else []))
         with tabs[0]:
             fig, ax = plt.subplots(figsize=(10, 3.8))
             ax.plot(result["x"], result["shear"], linewidth=2)
@@ -134,19 +152,30 @@ if st.button("Analyse multiple-support beam", type="primary", use_container_widt
             ax.grid(True, alpha=0.25)
             st.pyplot(fig, use_container_width=True)
             plt.close(fig)
-        with tabs[2]:
-            fig, ax = plt.subplots(figsize=(10, 3.8))
-            ax.plot(result["x"], result["deflection_mm"], linewidth=2)
-            ax.axhline(0, color="black", linewidth=0.8)
-            ax.set_ylabel("Deflection (mm, downward +)")
-            ax.set_xlabel("Distance from A (m)")
-            ax.grid(True, alpha=0.25)
-            st.pyplot(fig, use_container_width=True)
-            plt.close(fig)
+        if stiffness_mode:
+            with tabs[2]:
+                fig, ax = plt.subplots(figsize=(10, 3.8))
+                ax.plot(result["x"], result["deflection_mm"], linewidth=2)
+                ax.axhline(0, color="black", linewidth=0.8)
+                ax.set_ylabel("Deflection (mm, downward +)")
+                ax.set_xlabel("Distance from A (m)")
+                ax.grid(True, alpha=0.25)
+                st.pyplot(fig, use_container_width=True)
+                plt.close(fig)
 
-        st.subheader("Step-by-step stiffness-method solution")
-        for step in build_stiffness_method_steps(result, supports, point_loads,
-                                                  distributed_loads, applied_moments,
-                                                  float(youngs_modulus), float(second_moment)):
-            st.write(step)
+        if stiffness_mode:
+            st.subheader("Step-by-step stiffness-method solution")
+            for step in build_stiffness_method_steps(result, supports, point_loads,
+                                                      distributed_loads, applied_moments,
+                                                      float(youngs_modulus), float(second_moment)):
+                st.write(step)
+        else:
+            st.subheader("Step-by-step exam solution")
+            st.markdown("**Sign convention:** upward forces and counter-clockwise applied couples are positive.")
+            for step in result["reaction_steps"]:
+                st.code(step)
+            st.write("Convert each UDL into an equivalent point load: W = wL, acting at the centre of the loaded length.")
+            st.write("Construct the SFD from left to right: reactions and point loads cause vertical jumps; a UDL causes a linear change in shear.")
+            st.write("Construct the BMD by taking moments of all forces to the left of each section. Applied couples cause a moment jump.")
+            st.info("This mode calculates reactions, SFD and BMD only. Deflection cannot be calculated without EI.")
         st.warning("Educational analysis only. Verify results independently before using them for design.")
