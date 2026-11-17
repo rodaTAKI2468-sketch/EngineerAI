@@ -139,6 +139,44 @@ class BeamEngineTests(unittest.TestCase):
         )
         self.assertAlmostEqual(float(result["moment"].min()), -16.0, delta=0.02)
 
+    def test_full_span_udl_deflection_on_simply_supported_beam(self):
+        result = analyze_beam(
+            "Simply supported",
+            4.0,
+            self.e_gpa,
+            self.i_m4,
+            distributed_loads=[{"intensity": -2.0, "start": 0.0, "end": 4.0}],
+        )
+        expected_deflection_m = (
+            5.0 * 2000.0 * 4.0**4
+            / (384.0 * (self.e_gpa * 1e9) * self.i_m4)
+        )
+        self.assertAlmostEqual(
+            result["max_deflection_m"],
+            expected_deflection_m,
+            delta=expected_deflection_m * 0.003,
+        )
+        self.assertGreater(float(result["deflection"].max()), 0.0)
+
+    def test_full_span_udl_deflection_on_cantilever_beam(self):
+        result = analyze_beam(
+            "Cantilever",
+            4.0,
+            self.e_gpa,
+            self.i_m4,
+            distributed_loads=[{"intensity": -2.0, "start": 0.0, "end": 4.0}],
+        )
+        expected_deflection_m = (
+            2000.0 * 4.0**4
+            / (8.0 * (self.e_gpa * 1e9) * self.i_m4)
+        )
+        self.assertAlmostEqual(
+            result["max_deflection_m"],
+            expected_deflection_m,
+            delta=expected_deflection_m * 0.003,
+        )
+        self.assertGreater(float(result["deflection"].max()), 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
