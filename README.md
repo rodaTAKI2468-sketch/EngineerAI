@@ -63,3 +63,16 @@ A separate Streamlit page is available under **Support Configuration** in the ap
 - Fixed–pin, pin–fixed, fixed–fixed and other over-restrained combinations: flagged as statically indeterminate; no unsupported reaction values are fabricated.
 
 The page produces reactions, SFD/BMD and worked equilibrium steps for supported determinate configurations. The free–fixed case is solved by mirroring the beam from its fixed end. This is a transverse beam model: axial/horizontal reactions are not solved, and pin–pin is considered determinate only within that scope. Statically indeterminate cases require a future compatibility/stiffness-method solver using E and I.
+
+
+## Multiple-support and continuous beam solver (new)
+
+The **Multiple-Support Beam Solver** page analyses continuous and statically indeterminate beams using an Euler–Bernoulli beam-element stiffness method.
+
+- Two to eight user-positioned Pin, Roller or Fixed supports, including internal supports.
+- Multiple point loads, partial/full-span UDLs and applied couples.
+- Reactions at every support, SFD, BMD and elastic deflection.
+- Requires E and I because compatibility and deformation are part of the stiffness solution.
+- Displays the global stiffness-method workflow and equilibrium residuals.
+
+The model uses two degrees of freedom per node (vertical displacement and rotation), ideal supports, constant EI, small deflections and linear-elastic Euler–Bernoulli theory. Pin and Roller have the same vertical restraint in this transverse-only beam model; neither models axial restraint. The beam is continuous through internal supports (no internal hinges/releases in this first version). Mesh refinement affects numerical accuracy; use engineering judgement and verify results against analytical benchmarks. This is an educational tool, not a substitute for independent engineering verification or applicable design standards.
