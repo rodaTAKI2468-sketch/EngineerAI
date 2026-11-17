@@ -63,24 +63,34 @@ with st.sidebar:
     )
 
     st.divider()
-    st.subheader("Material and section")
-    youngs_modulus = st.number_input(
-        "Young's modulus, E (GPa)",
-        min_value=0.1,
-        max_value=1000.0,
-        value=200.0,
-        step=1.0,
-        help="Typical steel value is approximately 200 GPa.",
+    calculate_deflection = st.checkbox(
+        "Calculate elastic deflection",
+        value=False,
+        help="Turn this on only when the question provides Young's modulus E and second moment of area I.",
     )
-    second_moment = st.number_input(
-        "Second moment of area, I (m⁴)",
-        min_value=0.00000001,
-        max_value=1000.0,
-        value=0.0001,
-        format="%.8f",
-        step=0.00001,
-        help="Enter I in m⁴. Use the value for the beam's bending axis.",
-    )
+    if calculate_deflection:
+        st.subheader("Material and section")
+        youngs_modulus = st.number_input(
+            "Young's modulus, E (GPa)",
+            min_value=0.1,
+            max_value=1000.0,
+            value=200.0,
+            step=1.0,
+            help="Enter the value supplied by the question or material data.",
+        )
+        second_moment = st.number_input(
+            "Second moment of area, I (m⁴)",
+            min_value=0.00000001,
+            max_value=1000.0,
+            value=0.0001,
+            format="%.8f",
+            step=0.00001,
+            help="Enter I in m⁴ for the beam's bending axis.",
+        )
+    else:
+        youngs_modulus = None
+        second_moment = None
+        st.caption("Exam mode: E and I are not needed for reactions, SFD or BMD.")
 
 st.markdown(
     """
@@ -414,8 +424,12 @@ if run_analysis:
         results = analyze_beam(
             beam_type=engine_beam_type,
             beam_length=float(beam_length),
-            youngs_modulus_gpa=float(youngs_modulus),
-            second_moment_m4=float(second_moment),
+            youngs_modulus_gpa=(
+                float(youngs_modulus) if youngs_modulus is not None else None
+            ),
+            second_moment_m4=(
+                float(second_moment) if second_moment is not None else None
+            ),
             point_loads=point_loads,
             distributed_loads=distributed_loads,
             applied_moments=applied_moments,
@@ -440,18 +454,27 @@ if run_analysis:
             f'{results["max_moment_kNm"]:.3f} kN·m',
             help=f'At x = {results["max_moment_position_m"]:.3f} m from A.',
         )
-        result_col2.metric(
-            "Maximum |deflection|",
-            f'{results["max_deflection_m"] * 1000:.4f} mm',
-            help=f'At x = {results["max_deflection_position_m"]:.3f} m from A.',
-        )
+        if results["deflection"] is not None:
+            result_col2.metric(
+                "Maximum |deflection|",
+                f'{results["max_deflection_m"] * 1000:.4f} mm',
+                help=f'At x = {results["max_deflection_position_m"]:.3f} m from A.',
+            )
+        else:
+            result_col2.info("Deflection not calculated. Enable it in the sidebar and enter E and I when provided.")
 
         x = results["x"]
         shear = results["shear"]
         moment = results["moment"]
-        deflection_mm = results["deflection"] * 1000.0
-
-        diagrams_fig, axes = plt.subplots(3, 1, figsize=(11, 10), sharex=True)
+        has_deflection = results["deflection"] is not None
+        diagram_count = 3 if has_deflection else 2
+        diagrams_fig, axes = plt.subplots(
+            diagram_count,
+            1,
+            figsize=(11, 10 if has_deflection else 7),
+            sharex=True,
+        )
+        axes = np.atleast_1d(axes)
 
         axes[0].step(x, shear, where="post", linewidth=1.8)
         axes[0].axhline(0, color="black", linewidth=0.8)
@@ -467,14 +490,17 @@ if run_analysis:
         axes[1].set_title("Bending Moment Diagram (BMD)", loc="left")
         axes[1].grid(True, alpha=0.3)
 
-        axes[2].plot(x, deflection_mm, linewidth=1.8)
-        axes[2].axhline(0, color="black", linewidth=0.8)
-        axes[2].fill_between(x, deflection_mm, 0, alpha=0.18)
-        axes[2].set_ylabel("Deflection (mm)")
-        axes[2].set_xlabel("Distance from A, x (m)")
-        axes[2].set_title("Elastic Deflection Curve", loc="left")
-        axes[2].grid(True, alpha=0.3)
+        if has_deflection:
+            deflection_mm = results["deflection"] * 1000.0
+            axes[2].plot(x, deflection_mm, linewidth=1.8)
+            axes[2].axhline(0, color="black", linewidth=0.8)
+            axes[2].fill_between(x, deflection_mm, 0, alpha=0.18)
+            axes[2].set_ylabel("Deflection (mm)")
+            axes[2].set_title("Elastic Deflection Curve (positive downward)", loc="left")
+            axes[2].grid(True, alpha=0.3)
+            axes[2].invert_yaxis()
 
+        axes[-1].set_xlabel("Distance from A, x (m)")
         for axis in axes:
             axis.set_xlim(0, float(beam_length))
         diagrams_fig.tight_layout()
@@ -532,24 +558,29 @@ if run_analysis:
                 Each point load, UDL segment and applied couple is included
                 at its actual position along the beam.
 
-                **4. Calculate elastic deflection**
+                **4. Elastic deflection (optional)**
 
-                Euler–Bernoulli beam theory gives EI(d²y/dx²) = −M(x)
-                using the sign convention shown above. The app numerically
-                integrates this curvature and applies the support boundary
-                conditions.
+                When E and I are supplied, Euler–Bernoulli beam theory
+                integrates EI(d²y/dx²) = −M(x) with the appropriate support
+                boundary conditions. They are not required for reactions,
+                SFD or BMD.
                 """
             )
 
-        st.info(
-            "Deflection values use the positive-downward convention and are a numerical Euler–Bernoulli estimate. Accuracy "
-            "depends on the beam assumptions, input units and sampling. "
-            "Check results independently before using them for design."
-        )
+        if has_deflection:
+            st.info(
+                "Deflection values use the positive-downward convention and are a numerical Euler–Bernoulli estimate. "
+                "Check the assumed E, I, boundary conditions and units before using results for design."
+            )
+        else:
+            st.success(
+                "Exam-style statics analysis complete. Reactions, SFD and BMD "
+                "were calculated without assuming material or section properties."
+            )
 else:
     st.info(
-        "Enter your loading case, inspect the beam sketch, then select "
-        "**Analyze beam** to calculate the reactions, SFD, BMD and deflection."
+        "Enter the beam and loading. For exam-style statics, E and I are not required. "
+        "Enable elastic deflection only when the question provides both values."
     )
 
 st.divider()
