@@ -4,7 +4,7 @@ Sign convention:
 - Upward forces are positive; downward forces are negative.
 - Counter-clockwise applied couples are positive.
 - Sagging bending moments are positive.
-- Deflection is reported positive upward (downward deflection is negative).
+- Deflection is reported positive downward.
 All inputs and output diagrams use kN, m, kN/m and kN.m unless noted.
 """
 from __future__ import annotations
@@ -199,7 +199,7 @@ def analyze_beam(
         # For a cantilever, use the loads to the right of each section.
         for load in point_loads:
             distance = np.maximum(float(load["position"]) - x, 0.0)
-            moment_diagram -= float(load["magnitude"]) * distance
+            moment_diagram += float(load["magnitude"]) * distance
         for load in distributed_loads:
             start = float(load["start"])
             end = float(load["end"])
