@@ -88,7 +88,11 @@ def analyze_multiple_support_beam(
     events.extend(float(m["position"]) for m in applied_moments)
     for load in distributed_loads:
         events.extend([float(load["start"]), float(load["end"])])
-    base = sorted(events)
+    sorted_events = sorted(events)
+    base = []
+    for event in sorted_events:
+        if not base or abs(event - base[-1]) > 1e-9:
+            base.append(event)
     nodes = [base[0]]
     for left, right in zip(base[:-1], base[1:]):
         count = max(1, int(np.ceil((right-left)/max_element_length)))
