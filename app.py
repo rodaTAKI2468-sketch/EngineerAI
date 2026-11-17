@@ -78,6 +78,7 @@ with st.sidebar:
         max_value=1000.0,
         value=0.0001,
         format="%.8f",
+        step=0.00001,
         help="Enter I in m⁴. Use the value for the beam's bending axis.",
     )
 
