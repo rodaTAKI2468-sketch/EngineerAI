@@ -154,7 +154,8 @@ if st.button("Analyse multiple-support beam", type="primary", use_container_widt
         st.caption("Elastic bending stress uses σ = Mc/I. Rectangular maximum transverse shear uses τmax = 1.5V/A; for a user-defined section the displayed shear stress is the average V/A.")
         sc1, sc2 = st.columns(2)
         sc1.metric("Maximum bending stress, σmax", f"{stress_result['max_bending_stress_mpa']:.3f} MPa")
-        sc2.metric("Maximum shear stress, τ", f"{stress_result['max_shear_stress_mpa']:.3f} MPa")
+        shear_label = "Maximum shear stress, τmax" if section.get("shear_factor") else "Average shear stress, τavg"
+        sc2.metric(shear_label, f"{stress_result['max_shear_stress_mpa']:.3f} MPa")
         st.write(f"Maximum bending stress occurs at x = {stress_result['max_moment_position_m']:.3f} m; maximum shear stress is based on V at x = {stress_result['max_shear_position_m']:.3f} m.")
         st.write(f"Section properties: A = {section['area_m2']:.6g} m², I = {section['inertia_m4']:.6g} m⁴, c = {section['c_m']:.6g} m, Z = {section['section_modulus_m3']:.6g} m³.")
 
