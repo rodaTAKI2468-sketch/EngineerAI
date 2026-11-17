@@ -191,7 +191,7 @@ def analyze_multiple_support_beam(
     force_residual = float(sum(r["vertical_kN"] for r in support_reactions)
                            + sum(float(p["magnitude"]) for p in point_loads)
                            + sum(float(w["intensity"])*(float(w["end"])-float(w["start"])) for w in distributed_loads))
-    moment_residual = float(sum(r["vertical_kN"]*r["position"] - r["moment_kNm"] for r in support_reactions)
+    moment_residual = float(sum(r["vertical_kN"]*r["position"] + r["moment_kNm"] for r in support_reactions)
                             + sum(float(p["magnitude"])*float(p["position"]) for p in point_loads)
                             + sum(float(w["intensity"])*(float(w["end"])-float(w["start"]))*0.5*(float(w["start"])+float(w["end"])) for w in distributed_loads)
                             + sum(float(m["magnitude"]) for m in applied_moments))
