@@ -38,7 +38,7 @@ st.markdown(
 )
 
 st.title("🏗️ EngineerAI")
-st.caption("Interactive beam analysis • Reactions • SFD • BMD • Deflection")
+st.caption("Exam-style beam analysis • Reactions • SFD • BMD • Optional deflection")
 
 with st.sidebar:
     st.header("Beam setup")
