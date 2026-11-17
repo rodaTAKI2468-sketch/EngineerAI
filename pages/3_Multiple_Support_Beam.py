@@ -50,7 +50,7 @@ with st.sidebar:
             c1, c2 = st.columns(2)
             pos = c1.number_input(f"Position from A (m)", 0.0, float(length),
                                   float(default_positions[i]), 0.25, key=f"multi_support_pos_{i}")
-            support_options = ["Roller", "Pin"] if analysis_mode == "Exam / statics (no E or I)" else ["Roller", "Pin", "Fixed"]
+            support_options = ["Roller", "Pin"] if analysis_mode == "Exam / statics (determinate; no E required)" else ["Roller", "Pin", "Fixed"]
             kind = c2.selectbox("Type", support_options,
                                 index=1 if i == 0 else 0, key=f"multi_support_type_{analysis_mode}_{i}")
             supports.append({"position": float(pos), "type": kind})
@@ -116,7 +116,7 @@ plt.close(fig)
 
 if st.button("Analyse multiple-support beam", type="primary", use_container_width=True):
     try:
-        if analysis_mode == "Exam / statics (no E or I)":
+        if analysis_mode == "Exam / statics (determinate; no E required)":
             result = analyze_determinate_multiple_support_beam(
                 float(length), supports, point_loads, distributed_loads, applied_moments
             )
