@@ -14,6 +14,7 @@ EngineerAI is a Python and Streamlit learning tool for structural beam analysis.
 - Shear Force Diagram (SFD) and Bending Moment Diagram (BMD) in statics-only mode
 - Optional elastic deflection when both Young's modulus E and second moment of area I are supplied
 - PNG download of analysis diagrams
+- Step-by-step worked solutions for equivalent UDLs, support reactions, SFD and BMD section equations
 - Input validation and calculation-method notes
 
 ## Run the Streamlit app
@@ -50,4 +51,4 @@ Static beam results use equilibrium and beam section analysis. Reactions, SFD an
 
 The model assumes a prismatic beam, ideal supports, small deflections, linear-elastic behaviour and constant E and I when deflection is calculated. Use consistent units: beam length and load positions in m, point forces in kN, UDL intensities in kN/m, applied moments in kN·m, Young's modulus in GPa and second moment of area in m⁴.
 
-The app is an educational analysis aid, not a substitute for independent engineering verification or applicable design standards.
+The app can show the equilibrium and piecewise diagram steps used for an entered loading case. The section equations are valid between adjacent load/support events; check the diagram at point loads, UDL boundaries, applied couples and zero-shear locations. The app is an educational analysis aid, not a substitute for independent engineering verification or applicable design standards.

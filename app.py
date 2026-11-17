@@ -5,7 +5,7 @@ import numpy as np
 import streamlit as st
 from matplotlib.patches import Circle, FancyArrowPatch, Polygon, Rectangle
 
-from beam_engine import analyze_beam
+from beam_engine import analyze_beam, build_worked_solution
 
 
 st.set_page_config(
@@ -437,6 +437,14 @@ if run_analysis:
     except (ValueError, KeyError, TypeError) as error:
         st.error(f"Unable to analyze this loading case: {error}")
     else:
+        worked_solution = build_worked_solution(
+            beam_type=engine_beam_type,
+            beam_length=float(beam_length),
+            point_loads=point_loads,
+            distributed_loads=distributed_loads,
+            applied_moments=applied_moments,
+            results=results,
+        )
         st.divider()
         st.header("Analysis results")
 
@@ -538,34 +546,106 @@ if run_analysis:
             "reactions satisfy static equilibrium."
         )
 
-        with st.expander("Show calculation method"):
+        with st.expander("Step-by-step exam solution", expanded=True):
+            st.markdown("### 1. Identify the beam and support reactions")
+            st.write(worked_solution["support_note"])
             st.markdown(
-                """
-                **1. Replace each UDL with its resultant**
-
-                For a UDL of intensity w acting from a to b:
-
-                - Resultant force: W = w(b − a)
-                - Resultant location: x̄ = (a + b)/2
-
-                **2. Apply static equilibrium**
-
-                - ΣFy = 0
-                - ΣMA = 0
-
-                **3. Build the shear-force and bending-moment functions**
-
-                Each point load, UDL segment and applied couple is included
-                at its actual position along the beam.
-
-                **4. Elastic deflection (optional)**
-
-                When E and I are supplied, Euler–Bernoulli beam theory
-                integrates EI(d²y/dx²) = −M(x) with the appropriate support
-                boundary conditions. They are not required for reactions,
-                SFD or BMD.
-                """
+                "Sign convention: upward forces and counter-clockwise couples are positive; "
+                "downward forces and clockwise couples are negative."
             )
+
+            st.markdown("### 2. List the applied loads")
+            if worked_solution["point_load_steps"]:
+                for step in worked_solution["point_load_steps"]:
+                    st.write(f'• {step["equation"]}')
+            else:
+                st.write("No concentrated point loads were entered.")
+
+            if worked_solution["udl_steps"]:
+                st.markdown("**Convert each UDL into an equivalent point load**")
+                for step in worked_solution["udl_steps"]:
+                    st.write(f'**{step["label"]}**')
+                    st.code(step["equivalent_force"] + "\n" + step["centroid"])
+            else:
+                st.write("No UDLs were entered.")
+
+            if worked_solution["couple_steps"]:
+                st.markdown("**Applied couples**")
+                for step in worked_solution["couple_steps"]:
+                    st.write(f'• {step["equation"]}')
+            else:
+                st.write("No applied couples were entered.")
+
+            st.markdown("### 3. Apply static equilibrium")
+            st.caption(
+                "Use the equivalent UDL forces from Step 2. Distances are measured from support A."
+            )
+            st.code("\n".join(worked_solution["reaction_steps"]))
+
+            st.markdown("### 4. Construct the Shear Force Diagram (SFD)")
+            st.write(
+                "Move from A to B (or to the free end). Point loads cause vertical jumps "
+                "in shear; a UDL causes a linear change in shear."
+            )
+            for index, section in enumerate(worked_solution["intervals"], start=1):
+                st.markdown(
+                    f'**Interval {index}: {section["start"]:.4g} < x < {section["end"]:.4g} m**'
+                )
+                st.code(section["shear_equation"])
+
+            st.markdown("### 5. Construct the Bending Moment Diagram (BMD)")
+            st.write(
+                "Integrate the shear behaviour section by section, or take moments of "
+                "the loads on one side of the cut. The expression changes at each load boundary."
+            )
+            for index, section in enumerate(worked_solution["intervals"], start=1):
+                st.markdown(
+                    f'**Interval {index}: {section["start"]:.4g} < x < {section["end"]:.4g} m**'
+                )
+                st.code(section["moment_equation"])
+
+                shear_slope = section["shear_slope"]
+                shear_constant = section["shear_constant"]
+                if abs(shear_slope) > 1e-10:
+                    zero_shear_x = -shear_constant / shear_slope
+                    if section["start"] + 1e-8 < zero_shear_x < section["end"] - 1e-8:
+                        moment_at_zero_shear = (
+                            section["moment_quadratic"] * zero_shear_x**2
+                            + section["moment_linear"] * zero_shear_x
+                            + section["moment_constant"]
+                        )
+                        st.caption(
+                            f"V(x) = 0 at x = {zero_shear_x:.4g} m; "
+                            f"M(x) = {moment_at_zero_shear:.4g} kN·m there. "
+                            "This is a candidate local maximum or minimum of the BMD."
+                        )
+
+            st.markdown("### 6. Diagram checks and critical values")
+            st.write(worked_solution["boundary_note"])
+            st.write(worked_solution["applied_moment_note"])
+            st.write(
+                f'Maximum absolute shear: {results["max_shear_kN"]:.4g} kN '
+                f'at x = {results["max_shear_position_m"]:.4g} m.'
+            )
+            st.write(
+                f'Maximum absolute bending moment: {results["max_moment_kNm"]:.4g} kN·m '
+                f'at x = {results["max_moment_position_m"]:.4g} m.'
+            )
+            st.caption(
+                "Check critical points at supports, point-load locations, UDL boundaries, "
+                "applied couples and positions where V(x) = 0."
+            )
+
+            if has_deflection:
+                st.markdown("### 7. Optional elastic deflection")
+                st.write(
+                    "Since E and I were supplied, the app also integrates the "
+                    "Euler–Bernoulli relation EI(d²y/dx²) = −M(x) using the support boundary conditions."
+                )
+                st.write(
+                    f'Maximum absolute deflection: {results["max_deflection_m"] * 1000:.4g} mm '
+                    f'at x = {results["max_deflection_position_m"]:.4g} m.'
+                )
 
         if has_deflection:
             st.info(
